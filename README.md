@@ -1,2 +1,2 @@
 # Scripts
-Various scripts used in my server
+Various scripts used in by server
