@@ -1,0 +1,409 @@
+################################################################################################################
+#////////////////////////////////////////////////UPSTREAMS\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+################################################################################################################
+
+
+##################################################################################################
+#///////////////////////////////////////////////////////////////////////////////////AUTOMATION\\\#
+##################################################################################################
+
+# LAZYLIBRARIAN UPSTREAM
+upstream lazylibrarian-upstream {
+	server 192.168.2.20:5299;
+    keepalive 32;
+}
+
+# LIDARR UPSTREAM
+upstream lidarr-upstream {
+	server 192.168.2.20:8686;
+    keepalive 32;
+}
+
+# MYLAR UPSTREAM
+upstream mylar-upstream {
+	server 192.168.2.20:8090;
+    keepalive 32;
+}
+
+# RADARR UPSTREAM
+upstream radarr-upstream {
+	server 192.168.2.20:7878;
+    keepalive 32;
+}
+
+# SONARR UPSTREAM
+upstream sonarr-upstream {
+	server 192.168.2.20:8989;
+    keepalive 32;
+}
+
+##################################################################################################
+#//////////////////////////////////////////////////////////////////////////////////////CLIENTS\\\#
+##################################################################################################
+
+# AIRSONIC UPSTREAM
+upstream airsonic-upstream {
+	server 192.168.2.20:4040;
+    keepalive 32;
+}
+
+# CALIBREWEB UPSTREAM
+upstream calibreweb-upstream {
+	server 192.168.2.20:8083;
+    keepalive 32;
+}
+
+# CALIBREOPDS UPSTREAM
+upstream calibreopds-upstream {
+	server 192.168.2.20:8014;
+    keepalive 32;
+}
+
+# PLEX UPSTREAM
+upstream plex-upstream {
+	server 192.168.2.20:32400;
+    keepalive 32;
+}
+
+# UBOOQUITY UPSTREAM
+upstream ubooquity-upstream {
+	server 192.168.2.20:2202;
+    keepalive 32;
+}
+
+##################################################################################################
+#/////////////////////////////////////////////////////////////////////////////////////DOWNLOAD\\\#
+##################################################################################################
+
+# DELUGE UPSTREAM
+upstream deluge-upstream {
+	server 192.168.2.20:8113;
+    keepalive 32;
+}
+
+##################################################################################################
+#////////////////////////////////////////////////////////////////////////////////////////OTHER\\\#
+##################################################################################################
+
+# JACKETT UPSTREAM
+upstream jackett-upstream {
+	server 192.168.2.20:9117;
+    keepalive 32;
+}
+
+# OMBI UPSTREAM
+upstream ombi-upstream {
+	server 192.168.2.20:5000;
+    keepalive 32;
+}
+
+# TAUTULLI UPSTREAM
+upstream tautulli-upstream {
+	server 192.168.2.20:8181;
+    keepalive 32;
+}
+
+##################################################################################################
+#////////////////////////////////////////////////////////////////////////////////REMOTEDESKTOP\\\#
+##################################################################################################
+
+# GUACAMOLE UPSTREAM
+upstream guacamole-upstream {
+	server 192.168.2.20:8189;
+    keepalive 32;
+}
+
+################################################################################################################
+#////////////////////////////////////////////////SERVER BLOCK\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+################################################################################################################
+
+# REDIRECT TRAFFIC TO DOMAIN
+server {
+ 	listen 80;
+	listen 443 ssl http2;
+ 	server_name domain.com www.domain.com; 
+ 	return 301 https://$host$request_uri;
+}
+
+################################################################################################################
+#////////////////////////////////////////////////MAIN SERVER BLOCK\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+################################################################################################################
+
+# MAIN SERVER BLOCK
+server {
+	listen 443 ssl http2 default_server;
+	
+	root /config/www;
+	index index.html index.htm index.php;
+	server_name domain.com www.domain.com;
+
+	ssl_certificate /config/keys/letsencrypt/fullchain.pem;
+	ssl_certificate_key /config/keys/letsencrypt/privkey.pem;
+	ssl_dhparam /config/nginx/dhparams.pem;
+	ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';
+	ssl_prefer_server_ciphers on;
+	client_max_body_size 0;
+	
+	location / {
+		try_files $uri $uri/ /index.html /index.php?$args =404;
+	}
+
+	location ~ \.php$ {
+		fastcgi_split_path_info ^(.+\.php)(/.+)$;
+		# With php7-cgi alone:
+		fastcgi_pass 127.0.0.1:9000;
+		# With php7-fpm:
+		#fastcgi_pass unix:/var/run/php7-fpm.sock;
+		fastcgi_index index.php;
+		include /etc/nginx/fastcgi_params;
+	}
+	
+	# Custom error pages 
+	error_page 400 401 402 403 404 405 408 500 502 503 504 $scheme://$server_name/error.php?error=$status;
+	error_log    /config/log/nginx/error.log;
+	
+	# AUTHORIZATION BLOCK	
+	location /auth-admin {
+        internal;
+		rewrite ^ /auth.php?admin&ban=someone,thisperson;
+        proxy_set_header Content-Length "";
+    }
+
+    location /auth-user {
+        internal;
+		rewrite ^ /auth.php?user&ban=someone,thisperson;
+        proxy_set_header Content-Length "";
+    }
+		
+	# BLOCK ORGANIZR DASHBOARD FILES
+	location ~ /loginLog.json|chat.db|users.db|org.log {
+		return 404;
+	}
+	
+	# SSL LOCATIONS
+	location ~ /.well-known {
+        allow all;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+	
+################################################################################################################
+#////////////////////////////////////////////////SUBDIRECTORIES\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+################################################################################################################
+
+
+##################################################################################################
+#///////////////////////////////////////////////////////////////////////////////////AUTOMATION\\\#
+##################################################################################################
+
+	# LAZYLIBRARIAN CONTAINER
+	location ^~ /lazylibrarian/ {
+		auth_request /auth-admin;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://lazylibrarian-upstream/lazylibrarian/;
+		include /config/nginx/proxy.conf;		
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+	# LIDARR CONTAINER
+	location ^~ /lidarr/ {
+		auth_request /auth-admin;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://radarr-upstream/lidarr/;
+		include /config/nginx/proxy.conf;		
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+	# MYLAR CONTAINER
+	location ^~ /mylar/ {
+		auth_request /auth-admin;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://radarr-upstream/mylar/;
+		include /config/nginx/proxy.conf;		
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+	# RADARR CONTAINER
+	location ^~ /radarr/ {
+		auth_request /auth-admin;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://radarr-upstream/radarr/;
+		include /config/nginx/proxy.conf;		
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+	# RADARR ALLOW API FOR MOBILE APPS
+	location ^~ /radarr/api/ {
+    	proxy_pass http://radarr-upstream/radarr/api/;
+		include /config/nginx/proxy.conf;	
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+	# SONARR CONTAINER
+	location ^~ /sonarr/ {
+		auth_request /auth-admin;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://sonarr-upstream/sonarr/;
+		include /config/nginx/proxy.conf;
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+	# SONARR ALLOW API FOR MOBILE APPS
+	location ^~ /sonarr/api/ {
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://sonarr-upstream/sonarr/api/;
+		include /config/nginx/proxy.conf;
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+##################################################################################################
+#//////////////////////////////////////////////////////////////////////////////////////CLIENTS\\\#
+##################################################################################################
+
+	# AIRSONIC CONTAINER
+	location ^~ /music/ {
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://airsonic-upstream/music/;
+		include /config/nginx/proxy.conf;
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+	# CALIBREWEB CONTAINER
+	location ^~ /books/ {
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://calibreweb-upstream/books/;
+		include /config/nginx/proxy.conf;
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+		proxy_set_header X-Script-Name   	/books/;
+	}
+	
+	# CALIBREOPDS CONTAINER
+	location ^~ /booksopds/ {
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://calibreopds-upstream/;
+		include /config/nginx/proxy.conf;
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+		proxy_set_header X-Script-Name   	/books/;
+	}
+	
+	# PLEX CONTAINER	
+	location /tv/ {
+        proxy_pass http://plex-upstream/;
+        include /config/nginx/SSO.conf;
+    }
+    if ($http_referer ~* /tv/) {
+        rewrite ^/web/(.*) /tv/web/$1? redirect;
+    }
+	
+	# UBOOQUITY CONTAINER
+	location ^~ /comics/ {
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://ubooquity-upstream/comics/;
+		include /config/nginx/proxy.conf;
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}
+	
+##################################################################################################
+#/////////////////////////////////////////////////////////////////////////////////////DOWNLOAD\\\#
+##################################################################################################
+
+	# DELUGE CONTAINER
+	location ^~ /deluge {
+		auth_request /auth-admin;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+		proxy_pass http://deluge-upstream/;
+		proxy_set_header X-Deluge-Base "/deluge/";
+		include /config/nginx/proxy.conf;
+		add_header X-Frame-Options 			SAMEORIGIN;
+	}
+	
+##################################################################################################
+#////////////////////////////////////////////////////////////////////////////////////////OTHER\\\#
+##################################################################################################
+
+	# JACKETT CONTAINER
+	location ^~ /jackett/ {
+		auth_request /auth-admin;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://jackett-upstream/jackett/;
+		include /config/nginx/proxy.conf;
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+	}	
+	
+	# OMBI CONTAINER
+    location /request/ {
+		auth_request /auth-user;
+        proxy_pass http://ombi-upstream/request/;
+        proxy_http_version 					1.1;
+        proxy_set_header Upgrade 			$http_upgrade;
+        proxy_set_header Connection 		keep-alive;
+        proxy_set_header Host 				$host;
+        proxy_cache_bypass 					$http_upgrade;
+    }
+	
+	# TAUTULLI CONTAINER
+    location /statistics/ {
+		auth_request /auth-user;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+   		proxy_pass http://tautulli-upstream/statistics/;
+		include /config/nginx/proxy.conf;
+      	proxy_bind 							$server_addr;
+      	proxy_set_header X-Forwarded-Host 	$server_name;
+		proxy_set_header X-Forwarded-Ssl    on;
+	}
+	
+	# TAUTULLI ALLOW API FOR MOBILE APP
+    location /tautulli/api/ {
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+   		proxy_pass http://tautulli-upstream/tautulli/api/;
+		include /config/nginx/proxy.conf;
+      	proxy_bind 							$server_addr;
+      	proxy_set_header X-Forwarded-Host 	$server_name;
+		proxy_set_header X-Forwarded-Ssl    on;
+	}
+	
+##################################################################################################
+#////////////////////////////////////////////////////////////////////////////////REMOTEDESKTOP\\\#
+##################################################################################################
+
+	# GUACAMOLE CONTAINER
+	location ^~ /guacamole/ {
+		auth_request /auth-admin;
+		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
+    	proxy_pass http://guacamole-upstream/guacamole/;
+		include /config/nginx/proxy.conf;		
+    	proxy_set_header Host 				$host;
+    	proxy_set_header X-Real-IP 			$remote_addr;
+    	proxy_set_header X-Forwarded-For 	$proxy_add_x_forwarded_for;
+		proxy_set_header Upgrade 			$http_upgrade;
+		proxy_set_header Connection 		$http_connection;
+		proxy_buffering 					off;
+		access_log 							off;
+	}
+}
