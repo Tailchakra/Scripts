@@ -384,9 +384,9 @@ server {
 	}
 	
 	# TAUTULLI ALLOW API FOR MOBILE APP
-    location /tautulli/api/ {
+    location /statistics/api/ {
 		#if ($cookie_cookiePassword != "PASSWORD") { return 401; }
-   		proxy_pass http://tautulli-upstream/tautulli/api/;
+   		proxy_pass http://tautulli-upstream/statistics/api/;
 		include /config/nginx/proxy.conf;
       	proxy_bind 							$server_addr;
       	proxy_set_header X-Forwarded-Host 	$server_name;
