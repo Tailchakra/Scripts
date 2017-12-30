@@ -121,7 +121,7 @@ upstream guacamole-upstream {
 server {
  	listen 80;
 	
- 	server_name www.hiddenprocess.com hiddenprocess.com;
+ 	server_name www.domain.com domain.com;
 	
  	return 301 https://$host$request_uri;
 }
@@ -136,7 +136,7 @@ server {
 	
 	root /config/www;
 	index index.html index.htm index.php;
-	server_name www.hiddenprocess.com hiddenprocess.com;
+	server_name www.domain.com domain.com;
 
 	ssl_certificate /config/keys/letsencrypt/fullchain.pem;
 	ssl_certificate_key /config/keys/letsencrypt/privkey.pem;
